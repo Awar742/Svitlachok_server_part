@@ -1,113 +1,129 @@
-Технічна документація для сервісу обробки даних електропостачання
-Опис сервісу
-Сервіс є веб-додатком, що надає інформацію про електропостачання для конкретної групи користувачів. Дані отримуються через HTTP-запит до стороннього API та обробляються для представлення користувачу.
+Сервіс обробки даних електропостачання
 
-Архітектура
-Сервіс розроблений з використанням:
+Опис:
+Цей сервіс надає інформацію про електропостачання для заданої групи користувачів. Він виконує HTTP-запит до стороннього API, обробляє отримані дані та відображає їх у веб-інтерфейсі. Сервіс побудований з використанням Spring Boot і Java 17.
 
-Java 17: Мова програмування.
-Spring Boot: Фреймворк для створення веб-додатків.
-HTTP Client API: Для виконання HTTP-запитів.
-Jackson: Для обробки JSON.
-Thymeleaf: Шаблонізатор для рендерингу HTML.
-Основний функціонал
+
+Запуск проєкту:
+Вимоги:
+- Java 17 або вище,
+- Maven для управління залежностями,
+- Доступ до мережі Інтернет (для API-запитів);
+
+Команди для запуску:
+1. Склонуйте репозиторій:
+   git clone https://github.com/Awar742/Svitlachok_server_part.git
+2. Перейдіть до каталогу проєкту:
+cd Svitlachok_server_part
+3. Зберіть і запустіть додаток:
+mvn spring-boot:run
+4. Доступ до сервісу
+Відкрийте у браузері:
+http://localhost:8080/{номер_групи}
+де {номер_групи} — це значення з крапкою (до прикладу : 1.1 ).
+
+Функціонал:
 1. Отримання даних
-URL: /example/{a}
+URL: /{номер_групи}
 HTTP-метод: GET
-Параметри:
-{a}: Ідентифікатор групи (тип: double). Використовується для формування JSON-запиту.
-Валідація:
-Якщо значення a = 0, повертається повідомлення: "Введіть правильну групу".
-2. Виконання HTTP-запиту
-Формується POST-запит до стороннього API:
-URL: https://be-svitlo.oe.if.ua/GavByQueue
-Заголовки:
-Content-Type: application/json
-Accept: application/json
-Тіло запиту (JSON):
-json
-Копіювати код
-{
-    "queue": <a>
-}
-3. Обробка відповіді
-Якщо статус-код відповіді ≠ 200:
-Повідомлення про помилку додається до моделі.
-Якщо статус-код = 200:
-JSON відповіді обробляється для отримання:
-note: Коротка замітка про стан електропостачання.
-hoursList: Список годин з інформацією про електропостачання.
-4. Формування результату
-У шаблон передаються:
-note: Замітка (або "Дані відсутні").
-hours: Список об’єктів у форматі:
-"hour: <час>, electricity: <стан>".
-Клас MainController
-Опис класу
-Клас відповідає за обробку HTTP-запитів та взаємодію з зовнішнім API. Містить один метод get.
+Опис:
+Надсилає POST-запит до стороннього API з інформацією про задану групу.
+Обробляє отримані дані та передає їх у шаблон для відображення.
 
-Метод get
-java
-Копіювати код
-@GetMapping("/{a}")
-public String get(@PathVariable("a") double a, Model model)
-Алгоритм роботи
-Перевірка параметра a (повертається помилка, якщо a = 0).
-Формування POST-запиту до API.
-Обробка відповіді:
-Якщо статус-код ≠ 200: Повертається повідомлення про помилку.
-Якщо статус-код = 200: JSON відповіді аналізується.
-Передача даних у шаблон index.
-Інтеграція з API
-URL API
-https://be-svitlo.oe.if.ua/GavByQueue
+2. Валідація параметрів
+Якщо значення {номер_групи} дорівнює 0, система повертає повідомлення:
+"Введіть правильну групу".
 
-Формат запиту
-Метод: POST
-Заголовки:
-Content-Type: application/json
-Accept: application/json
-Приклад тіла запиту:
-json
-Копіювати код
-{
-    "queue": 123.45
-}
-Формат відповіді
-json
-Копіювати код
-{
-    "current": {
-        "note": "Увага, відключення!"
-    },
-    "graphs": {
-        "today": {
-            "hoursList": [
-                {"hour": "08:00", "electricity": 1},
-                {"hour": "09:00", "electricity": 0}
-            ]
+3. Взаємодія зі стороннім API
+URL API: https://be-svitlo.oe.if.ua/GavByQueue
+Формат запиту:
+    Метод: POST
+    Тіло запиту (JSON):
+    {
+        "queue": <номер_групи>
+    }
+
+4. Обробка відповіді
+Статус-код 200: Обробляється тіло відповіді.
+Отримуються:
+note: замітка про стан електропостачання.
+hoursList: список годин з інформацією про електроенергію.
+Інший статус-код: Відображається повідомлення про помилку.
+
+Структура проєкту:
+example.demo
+├── MainController.java      
+├── resources/
+│   ├── templates/
+│   │   └── index.html        
+│   └── application.properties 
+├── pom.xml          
+
+
+Код основного контролера:
+@Controller
+public class MainController {
+
+    @GetMapping("/{a}")
+    public String get(@PathVariable("a") double a, Model model) {
+        try {
+            if (a == 0) {
+                model.addAttribute("response", "Введіть правильну групу");
+                return "index";
+            }
+
+            HttpClient client = HttpClient.newHttpClient();
+
+            String url = "https://be-svitlo.oe.if.ua/GavByQueue";
+
+            Map<String, Object> jsonObject = Map.of("queue", a);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonRequestBody = objectMapper.writeValueAsString(jsonObject);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonRequestBody))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                model.addAttribute("response", "Помилка отримання відповіді: " + response.body());
+                return "index";
+            }
+
+            String responseBody = response.body();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+
+            String note = rootNode.path("current").path("note").asText("Дані відсутні");
+
+            List<String> hourDetails = new ArrayList<>();
+            JsonNode hoursListNode = rootNode.path("graphs").path("today").path("hoursList");
+
+            for (JsonNode hourNode : hoursListNode) {
+                String hour = hourNode.path("hour").asText("Невідомо");
+                int electricity = hourNode.path("electricity").asInt(-1);
+                hourDetails.add("hour: " + hour + ", electricity: " + electricity);
+            }
+            
+            model.addAttribute("note", note);
+            model.addAttribute("hours", hourDetails);
+
+        } catch (Exception e) {
+            model.addAttribute("response", "Сталася помилка: " + e.getMessage());
         }
+
+        return "index";
     }
 }
-Опис полів
-current.note: Коротка замітка.
-graphs.today.hoursList: Список годин з інформацією про електропостачання:
-hour: Час (тип: String).
-electricity: Стан електропостачання (тип: int, 1 – є, 0 – немає).
-Використані технології
-Spring Boot: Для реалізації контролера.
-Thymeleaf: Для створення веб-інтерфейсу.
-Jackson: Для обробки JSON.
-HTTP Client API: Для взаємодії з API.
-Результат виконання
-Веб-інтерфейс
-Шаблон index.html відображає:
 
-Замітку про стан електропостачання.
-Таблицю годин із деталями про наявність електроенергії.
+Результати виконання:
+
+Сервіс відображає:
+Замітку про стан електропостачання (поле note).
+Список годин із деталями про електропостачання (поле hoursList).
 Помилки та їх обробка
-Якщо значення a некоректне (0): Повертається повідомлення "Введіть правильну групу".
-Якщо API повертає помилку:
-Показується повідомлення: "Помилка отримання відповіді".
-Якщо виникає виняток:
-Повертається повідомлення про помилку.
+Некоректне значення параметра: Повертається повідомлення "Введіть правильну групу".
+Проблеми з API-запитом: Відображається помилка із зазначенням статус-коду та тексту відповіді.
